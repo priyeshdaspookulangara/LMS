@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorAccent">#03DAC5</color>
+
+    <!-- Order Status Colors -->
+    <color name="pending_status_color">#FFC107</color> <!-- Amber -->
+    <color name="shipped_status_color">#2196F3</color> <!-- Blue -->
+    <color name="delivered_status_color">#4CAF50</color> <!-- Green -->
+    <color name="cancelled_status_color">#F44336</color> <!-- Red -->
+    <color name="default_status_color">#757575</color> <!-- Grey -->
+</resources>

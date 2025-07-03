@@ -1,0 +1,64 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 30 // Target Android API level
+    buildToolsVersion "30.0.3"
+
+    defaultConfig {
+        applicationId "com.example.ecommerceapp"
+        minSdkVersion 21 // Minimum Android API level
+        targetSdkVersion 30
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'androidx.appcompat:appcompat:1.2.0' // Use appropriate versions
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
+    implementation 'com.google.android.material:material:1.3.0' // Added Material Components
+    implementation "androidx.lifecycle:lifecycle-viewmodel:2.3.1" // Added ViewModel
+    implementation "androidx.lifecycle:lifecycle-livedata:2.3.1" // Added LiveData
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0" // Added SwipeRefreshLayout
+
+    // Firebase Messaging for Push Notifications (even for simulation of service)
+    implementation 'com.google.firebase:firebase-messaging:23.0.0' // Use a recent version
+
+    // Core testing libraries
+    testImplementation 'junit:junit:4.13.2' // Updated version
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3' // Updated version
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0' // Updated version
+
+    // Mockito for unit tests
+    testImplementation 'org.mockito:mockito-core:4.5.1' // Use a recent version of Mockito
+    testImplementation 'org.mockito:mockito-inline:4.5.1' // For mocking final classes/methods if needed
+    androidTestImplementation 'org.mockito:mockito-android:4.5.1' // For Android instrumented tests
+
+    // AndroidX Test Core for ActivityScenario, etc.
+    testImplementation "androidx.arch.core:core-testing:2.1.0" // For LiveData testing (InstantTaskExecutorRule)
+    androidTestImplementation "androidx.arch.core:core-testing:2.1.0"
+
+    // Espresso UI testing components
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.4.0' // For RecyclerView actions, DatePicker, etc.
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.4.0' // For intent validation
+
+    // UI Automator for more complex UI interactions (optional, if needed)
+    // androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
+
+    // Add other dependencies here:
+    // e.g., Firebase, Retrofit, Glide, Room, etc.
+}

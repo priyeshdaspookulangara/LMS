@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_cart"
+        android:icon="@android:drawable/ic_menu_cart"
+        android:title="Cart"
+        app:showAsAction="ifRoom|withText"
+        app:actionLayout="@layout/menu_item_cart_with_badge" />
+
+    <item
+        android:id="@+id/action_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Search"
+        app:showAsAction="ifRoom|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView" />
+
+    <item
+        android:id="@+id/action_filter_category"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Filter by Category"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_order_history"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:title="My Orders"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_simulate_notification"
+        android:title="Simulate Notification (Test)"
+        app:showAsAction="never" />
+</menu>
