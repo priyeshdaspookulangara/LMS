@@ -44,8 +44,7 @@ class AuthCheckFragment : Fragment() {
             viewModel.onNavigationComplete() // Reset the command after navigation
         }
 
-        // Start the auth check
-        viewModel.checkAuthState()
+    // viewModel.checkAuthState() // Removed as it's called in ViewModel's init block
     }
 
     override fun onDestroyView() {

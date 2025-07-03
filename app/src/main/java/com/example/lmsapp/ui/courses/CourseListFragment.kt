@@ -77,9 +77,15 @@ class CourseListFragment : Fragment() {
     private fun setupRecyclerView() {
         courseAdapter = CourseAdapter { course ->
             // Handle course item click - e.g., navigate to course details
-            Toast.makeText(context, "Clicked on ${course.title}", Toast.LENGTH_SHORT).show()
-            // val action = CourseListFragmentDirections.actionCourseListFragmentToCourseDetailFragment(course.id or course.key)
-            // findNavController().navigate(action) // TODO: Define this action and fragment later
+            if (course.key.isNullOrBlank()) {
+                Toast.makeText(context, "Course key is missing, cannot open details.", Toast.LENGTH_SHORT).show()
+                return@CourseAdapter
+            }
+            val action = CourseListFragmentDirections.actionCourseListFragmentToCourseDetailFragment(
+                courseKey = course.key,
+                title = course.title ?: "Course Details" // Pass title for AppBar
+            )
+            findNavController().navigate(action)
         }
         binding.rvCourses.apply {
             adapter = courseAdapter

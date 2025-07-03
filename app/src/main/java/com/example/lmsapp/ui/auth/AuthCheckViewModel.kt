@@ -1,28 +1,34 @@
 package com.example.lmsapp.ui.auth
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import com.example.lmsapp.auth.AuthRepository
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
-class AuthCheckViewModel : ViewModel() {
+class AuthCheckViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val authRepository = AuthRepository(application)
 
     private val _navigationCommand = MutableLiveData<NavigationCommand?>()
     val navigationCommand: LiveData<NavigationCommand?> = _navigationCommand
 
-    // In a real app, you'd inject a repository or use SharedPreferences/DataStore here
-    // to check for a valid token.
-    fun checkAuthState() {
+    init {
+        checkAuthState()
+    }
+
+    private fun checkAuthState() {
         viewModelScope.launch {
-            // Simulate a delay for checking auth status (e.g., reading from DataStore)
-            delay(1500)
+            // Attempt to get the token. Using firstOrNull for a one-time check at startup.
+            // In more complex scenarios, you might want to continuously observe the token.
+            val token = authRepository.authToken.firstOrNull()
 
-            // Placeholder logic: Assume user is not authenticated
-            val isAuthenticated = false // TODO: Replace with actual auth check
-
-            if (isAuthenticated) {
+            // Basic check: if token is not null and not empty, consider authenticated.
+            // Real validation (e.g., checking expiry against a server) would be more complex.
+            if (!token.isNullOrEmpty()) {
                 _navigationCommand.value = NavigationCommand.ToCourseList
             } else {
                 _navigationCommand.value = NavigationCommand.ToLoginRegister
@@ -36,6 +42,6 @@ class AuthCheckViewModel : ViewModel() {
 
     sealed class NavigationCommand {
         object ToLoginRegister : NavigationCommand()
-        object ToCourseList : NavigationCommand()
+        object ToCourseList : NavigationCommand() // This will imply isGuest = false
     }
 }

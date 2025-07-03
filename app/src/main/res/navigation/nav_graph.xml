@@ -41,12 +41,29 @@
     <fragment
         android:id="@+id/courseListFragment"
         android:name="com.example.lmsapp.ui.courses.CourseListFragment"
-        android:label="fragment_course_list"
+        android:label="{title}" <!-- Dynamic title, set in Fragment -->
         tools:layout="@layout/fragment_course_list" >
         <argument
             android:name="isGuest"
             app:argType="boolean"
             android:defaultValue="false" />
+        <action
+            android:id="@+id/action_courseListFragment_to_courseDetailFragment"
+            app:destination="@id/courseDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/courseDetailFragment"
+        android:name="com.example.lmsapp.ui.courses.CourseDetailFragment"
+        android:label="{title}" <!-- Dynamic title, set in Fragment -->
+        tools:layout="@layout/fragment_course_detail">
+        <argument
+            android:name="courseKey"
+            app:argType="string" />
+        <argument
+            android:name="title"
+            app:argType="string"
+            android:defaultValue="Course Details" />
     </fragment>
 
     <!-- Placeholder for actual login screen -->
@@ -54,6 +71,12 @@
         android:id="@+id/placeholderLoginFragment"
         android:name="com.example.lmsapp.ui.auth.PlaceholderLoginFragment"
         android:label="Placeholder Login"
-        tools:layout="@layout/fragment_placeholder_login" />
+        tools:layout="@layout/fragment_placeholder_login" >
+        <action
+            android:id="@+id/action_placeholderLoginFragment_to_courseListFragment"
+            app:destination="@id/courseListFragment"
+            app:popUpTo="@id/nav_graph"
+            app:popUpToInclusive="true" />
+    </fragment>
 
 </navigation>

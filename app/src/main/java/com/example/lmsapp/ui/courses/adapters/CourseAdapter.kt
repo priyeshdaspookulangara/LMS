@@ -9,29 +9,33 @@ import com.example.lmsapp.courses.models.Course
 import com.example.lmsapp.databinding.ItemCourseBinding
 // import com.bumptech.glide.Glide // Example image loading library, add dependency if used
 
-class CourseAdapter(private val onItemClicked: (Course) -> Unit) :
+class CourseAdapter(private val onItemClicked: (Course) -> Unit) : // onItemClicked can be used for other interactions if needed, or directly for navigation
     ListAdapter<Course, CourseAdapter.CourseViewHolder>(CourseDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): CourseViewHolder {
         val binding = ItemCourseBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return CourseViewHolder(binding)
+        return CourseViewHolder(binding, onItemClicked)
     }
 
     override fun onBindViewHolder(holder: CourseViewHolder, position: Int) {
         val course = getItem(position)
         holder.bind(course)
-        holder.itemView.setOnClickListener {
-            onItemClicked(course)
-        }
+        // Set click listener in bind or ViewHolder constructor if it needs access to item data for navigation
     }
 
-    inner class CourseViewHolder(private val binding: ItemCourseBinding) :
-        RecyclerView.ViewHolder(binding.root) {
+    class CourseViewHolder(
+        private val binding: ItemCourseBinding,
+        private val onItemClicked: (Course) -> Unit // Pass callback here
+    ) : RecyclerView.ViewHolder(binding.root) {
 
         fun bind(course: Course) {
             binding.tvCourseTitle.text = course.title ?: "No Title"
             binding.tvCourseCategory.text = course.category ?: "N/A"
-            binding.tvCourseInstructor.text = course.instructorName ?: "Unknown Instructor"
+            binding.tvCourseInstructor.text = course.instructorDetails?.name ?: course.instructorName ?: "Unknown Instructor"
+
+            itemView.setOnClickListener {
+                onItemClicked(course) // This will be used for navigation
+            }
 
             // Example using Glide to load image, uncomment and add dependency if you want this
             // Glide.with(binding.ivCourseThumbnail.context)
