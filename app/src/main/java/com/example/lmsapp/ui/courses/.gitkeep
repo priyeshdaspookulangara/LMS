@@ -1,0 +1,2 @@
+# Ensure this directory exists.
+# It should already exist due to sub-packages viewmodels and adapters.

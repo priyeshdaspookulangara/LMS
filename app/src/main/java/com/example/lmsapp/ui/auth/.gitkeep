@@ -1,0 +1,2 @@
+# This file is to ensure the directory is created if it wasn't by PlaceholderLoginFragment.kt
+# It should already exist due to PlaceholderLoginFragment.kt, but this is a safeguard.
