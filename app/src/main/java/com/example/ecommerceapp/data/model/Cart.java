@@ -1,97 +1,113 @@
 package com.example.ecommerceapp.data.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Cart {
-    private List<CartItem> items;
-    private double totalPrice;
-    private int totalItems; // Total number of unique products, or sum of quantities
 
+    @SerializedName("cartId")
+    private String cartId;
+
+    @SerializedName("userId")
+    private String userId;
+
+    @SerializedName("items")
+    private List<CartItem> items; // Uses the updated CartItem model
+
+    @SerializedName("totalAmount")
+    private double totalAmount;
+
+    // Client-side calculated fields, not directly from this specific API response structure,
+    // but useful if Cart model is also used for local manipulation before API sync.
+    // However, for direct API mapping, these might be redundant if totalAmount is authoritative.
+    // private int totalItemsQuantity; // Sum of quantities of all items
+
+    // Default constructor for Gson
     public Cart() {
-        this.items = new ArrayList<>();
-        this.totalPrice = 0.0;
-        this.totalItems = 0;
+        this.items = new ArrayList<>(); // Initialize to avoid null pointer if API returns empty cart without items array
     }
 
+    public Cart(String cartId, String userId, List<CartItem> items, double totalAmount) {
+        this.cartId = cartId;
+        this.userId = userId;
+        this.items = items;
+        this.totalAmount = totalAmount;
+    }
+
+    // Getters
+    public String getCartId() { return cartId; }
+    public String getUserId() { return userId; }
     public List<CartItem> getItems() {
+        if (items == null) { // Defensive coding
+            items = new ArrayList<>();
+        }
         return items;
     }
+    public double getTotalAmount() { return totalAmount; }
 
-    public void setItems(List<CartItem> items) {
-        this.items = items;
-        calculateTotals();
-    }
+    // Setters (mainly for Gson, or if client needs to modify)
+    public void setCartId(String cartId) { this.cartId = cartId; }
+    public void setUserId(String userId) { this.userId = userId; }
+    public void setItems(List<CartItem> items) { this.items = items; }
+    public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
 
-    public double getTotalPrice() {
-        return totalPrice;
-    }
 
-    public int getTotalItemCount() { // This is sum of quantities of all items
-        return totalItems;
-    }
+    // Client-side helper methods (these were from the old Cart model, may or may not be needed
+    // if all cart logic is now server-driven and client just displays API response)
 
-    public int getUniqueProductCount() { // This is the number of distinct products
-        return items.size();
-    }
-
-    public void addItem(Product product, int quantity) {
-        if (product == null || quantity <= 0) {
-            return; // Or throw an exception
-        }
-
+    public int getTotalItemCount() { // Sum of quantities of all items
+        if (items == null) return 0;
+        int count = 0;
         for (CartItem item : items) {
-            if (item.getProduct().getProductId().equals(product.getProductId())) {
-                // Product already in cart, update quantity
-                item.setQuantity(item.getQuantity() + quantity);
-                calculateTotals();
-                return;
-            }
+            count += item.getQuantity();
         }
-        // Product not in cart, add new CartItem
-        items.add(new CartItem(product, quantity));
-        calculateTotals();
+        return count;
+    }
+
+    public int getUniqueProductCount() { // Number of distinct line items
+        return items != null ? items.size() : 0;
+    }
+
+    // The following methods (addItem, updateItemQuantity, removeItem, clearCart, calculateTotals)
+    // were for client-side manipulation of a local cart.
+    // With an API-driven cart, these operations will be handled by making API calls
+    // (e.g., POST /cart/items, PUT /cart/items/{id}, etc.) in CartRepository.
+    // The Cart model itself primarily becomes a DTO for API responses.
+    // So, these local manipulation methods might be removed or adapted if there's a
+    // temporary client-side cart state before syncing with the API.
+    // For now, I will comment them out to emphasize the shift to API-driven state.
+
+    /*
+    public void addItem(Product product, int quantity) {
+        // ... old logic ...
     }
 
     public void updateItemQuantity(String productId, int newQuantity) {
-        if (newQuantity <= 0) {
-            removeItem(productId);
-            return;
-        }
-        for (CartItem item : items) {
-            if (item.getProduct().getProductId().equals(productId)) {
-                item.setQuantity(newQuantity);
-                calculateTotals();
-                return;
-            }
-        }
+        // ... old logic ...
     }
 
     public void removeItem(String productId) {
-        items.removeIf(item -> item.getProduct().getProductId().equals(productId));
-        calculateTotals();
+        // ... old logic ...
     }
 
     public void clearCart() {
-        items.clear();
-        calculateTotals();
+        // ... old logic ...
     }
 
     private void calculateTotals() {
-        totalPrice = 0.0;
-        totalItems = 0;
-        for (CartItem item : items) {
-            totalPrice += item.getSubtotal();
-            totalItems += item.getQuantity();
-        }
+        // ... old logic, now totalAmount comes from API ...
     }
+    */
 
     @Override
     public String toString() {
         return "Cart{" +
-                "itemsCount=" + items.size() +
-                ", totalQuantity=" + totalItems +
-                ", totalPrice=" + totalPrice +
+                "cartId='" + cartId + '\'' +
+                ", userId='" + userId + '\'' +
+                ", itemCount=" + getUniqueProductCount() +
+                ", totalQuantity=" + getTotalItemCount() +
+                ", totalAmount=" + totalAmount +
                 '}';
     }
 }

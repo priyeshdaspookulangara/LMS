@@ -1,98 +1,121 @@
 package com.example.ecommerceapp.data.model;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.List;
-import java.util.Date;
+// import java.util.Date; // Keep if API returns Date, or use String and parse
 
 public class Order {
+
+    @SerializedName("orderId") // From POST /orders response example
     private String orderId;
-    private String userId; // From User model
-    private Date orderDate;
-    private List<OrderItem> items;
+
+    @SerializedName("userId") // Assuming API might return this, or it's known client-side
+    private String userId;
+
+    @SerializedName("createdAt") // From POST /orders response example (e.g., "2025-07-03T16:45:00Z")
+    private String createdAt; // Store as String, parse to Date for display if needed
+
+    @SerializedName("items") // For GET /orders/{orderId}
+    private List<OrderItem> items; // Uses OrderItem model (to be updated)
+
+    @SerializedName("totalAmount") // From POST /orders response example
     private double totalAmount;
-    private String status; // e.g., "Pending", "Processing", "Shipped", "Delivered", "Cancelled"
 
-    // Shipping Information
-    private String shippingFullName;
-    private String shippingAddressLine1;
-    private String shippingAddressLine2;
-    private String shippingCity;
-    private String shippingState;
-    private String shippingPostalCode;
-    private String shippingCountry;
-    private String shippingPhoneNumber;
+    @SerializedName("status") // From POST /orders response example
+    private String status;
 
-    // Payment Information (Simulated)
-    private String paymentMethod; // e.g., "Credit Card", "PayPal"
-    private String paymentStatus; // e.g., "Pending", "Paid", "Failed"
-    private String transactionId; // From payment gateway
+    // Detailed Order (from GET /orders/{orderId}) might include these:
+    // These fields are based on the old Order model and common order details.
+    // Adjust them if the GET /orders/{orderId} API response structure is different.
 
-    public Order(String orderId, String userId, Date orderDate, List<OrderItem> items,
-                 double totalAmount, String status, String shippingFullName, String shippingAddressLine1,
-                 String shippingAddressLine2, String shippingCity, String shippingState,
-                 String shippingPostalCode, String shippingCountry, String shippingPhoneNumber,
-                 String paymentMethod, String paymentStatus, String transactionId) {
-        this.orderId = orderId;
-        this.userId = userId;
-        this.orderDate = orderDate;
-        this.items = items;
-        this.totalAmount = totalAmount;
-        this.status = status;
-        this.shippingFullName = shippingFullName;
-        this.shippingAddressLine1 = shippingAddressLine1;
-        this.shippingAddressLine2 = shippingAddressLine2;
-        this.shippingCity = shippingCity;
-        this.shippingState = shippingState;
-        this.shippingPostalCode = shippingPostalCode;
-        this.shippingCountry = shippingCountry;
-        this.shippingPhoneNumber = shippingPhoneNumber;
-        this.paymentMethod = paymentMethod;
-        this.paymentStatus = paymentStatus;
-        this.transactionId = transactionId;
-    }
+    @SerializedName("shippingAddress") // Assuming this might be a nested object or just an ID string
+    private ShippingAddress shippingAddress; // Placeholder for a ShippingAddress model or String ID
 
-    // Minimal constructor for building up the order
-    public Order(String userId) {
-        this.userId = userId;
-        this.orderDate = new Date(); // Set current date/time
-        this.status = "Pending"; // Default status
-        this.paymentStatus = "Pending";
-    }
+    @SerializedName("paymentDetails") // Assuming this might be a nested object or just an ID string
+    private PaymentDetails paymentDetails; // Placeholder for PaymentDetails model or String ID
 
+    // The old model had individual shipping fields. If API provides a nested shippingAddress object:
+    // Example ShippingAddress class (create if needed):
+    // public static class ShippingAddress {
+    //     @SerializedName("fullName") public String fullName;
+    //     @SerializedName("addressLine1") public String addressLine1;
+    //     @SerializedName("addressLine2") public String addressLine2;
+    //     @SerializedName("city") public String city;
+    //     @SerializedName("state") public String state;
+    //     @SerializedName("postalCode") public String postalCode;
+    //     @SerializedName("country") public String country;
+    //     @SerializedName("phoneNumber") public String phoneNumber;
+    // }
+    // Example PaymentDetails class (create if needed):
+    // public static class PaymentDetails {
+    //     @SerializedName("paymentMethod") public String paymentMethod; // e.g., "Credit Card", "PayPal"
+    //     @SerializedName("paymentStatus") public String paymentStatus; // e.g., "Paid", "Pending"
+    //     @SerializedName("transactionId") public String transactionId;
+    // }
+
+
+    // Default constructor for Gson
+    public Order() {}
 
     // Getters
     public String getOrderId() { return orderId; }
     public String getUserId() { return userId; }
-    public Date getOrderDate() { return orderDate; }
+    public String getCreatedAt() { return createdAt; } // Returns String, parse for display
     public List<OrderItem> getItems() { return items; }
     public double getTotalAmount() { return totalAmount; }
     public String getStatus() { return status; }
-    public String getShippingFullName() { return shippingFullName; }
-    public String getShippingAddressLine1() { return shippingAddressLine1; }
-    public String getShippingAddressLine2() { return shippingAddressLine2; }
-    public String getShippingCity() { return shippingCity; }
-    public String getShippingState() { return shippingState; }
-    public String getShippingPostalCode() { return shippingPostalCode; }
-    public String getShippingCountry() { return shippingCountry; }
-    public String getShippingPhoneNumber() { return shippingPhoneNumber; }
-    public String getPaymentMethod() { return paymentMethod; }
-    public String getPaymentStatus() { return paymentStatus; }
-    public String getTransactionId() { return transactionId; }
+    public ShippingAddress getShippingAddress() { return shippingAddress; }
+    public PaymentDetails getPaymentDetails() { return paymentDetails; }
 
-    // Setters (needed for building the order through checkout steps)
+    // Setters (mainly for Gson)
     public void setOrderId(String orderId) { this.orderId = orderId; }
-    public void setOrderDate(Date orderDate) { this.orderDate = orderDate; }
+    public void setUserId(String userId) { this.userId = userId; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public void setItems(List<OrderItem> items) { this.items = items; }
     public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
     public void setStatus(String status) { this.status = status; }
-    public void setShippingFullName(String shippingFullName) { this.shippingFullName = shippingFullName; }
-    public void setShippingAddressLine1(String shippingAddressLine1) { this.shippingAddressLine1 = shippingAddressLine1; }
-    public void setShippingAddressLine2(String shippingAddressLine2) { this.shippingAddressLine2 = shippingAddressLine2; }
-    public void setShippingCity(String shippingCity) { this.shippingCity = shippingCity; }
-    public void setShippingState(String shippingState) { this.shippingState = shippingState; }
-    public void setShippingPostalCode(String shippingPostalCode) { this.shippingPostalCode = shippingPostalCode; }
-    public void setShippingCountry(String shippingCountry) { this.shippingCountry = shippingCountry; }
-    public void setShippingPhoneNumber(String shippingPhoneNumber) { this.shippingPhoneNumber = shippingPhoneNumber; }
-    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
-    public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
-    public void setTransactionId(String transactionId) { this.transactionId = transactionId; }
+    public void setShippingAddress(ShippingAddress shippingAddress) { this.shippingAddress = shippingAddress; }
+    public void setPaymentDetails(PaymentDetails paymentDetails) { this.paymentDetails = paymentDetails; }
+
+
+    // --- Placeholder inner classes for ShippingAddress and PaymentDetails ---
+    // These should be moved to their own files if they become complex or are used elsewhere.
+    // Define fields based on what GET /orders/{orderId} actually returns.
+    public static class ShippingAddress {
+        @SerializedName("id") // If API refers to a saved address by ID
+        public String id;
+        @SerializedName("fullName")
+        public String fullName;
+        @SerializedName("addressLine1")
+        public String addressLine1;
+        @SerializedName("addressLine2")
+        public String addressLine2;
+        @SerializedName("city")
+        public String city;
+        @SerializedName("state")
+        public String state;
+        @SerializedName("postalCode")
+        public String postalCode;
+        @SerializedName("country")
+        public String country;
+        @SerializedName("phoneNumber")
+        public String phoneNumber;
+        // Add constructor, getters, setters if needed
+    }
+
+    public static class PaymentDetails {
+        @SerializedName("id") // If API refers to a saved payment method by ID
+        public String id;
+        @SerializedName("paymentMethodType") // e.g., "credit_card", "paypal"
+        public String paymentMethodType;
+        @SerializedName("paymentStatus")
+        public String paymentStatus;
+        @SerializedName("transactionId")
+        public String transactionId; // From payment gateway after processing
+        @SerializedName("last4Digits") // Example for card
+        public String last4Digits;
+        // Add constructor, getters, setters if needed
+    }
+    // --- End placeholder inner classes ---
+
 }

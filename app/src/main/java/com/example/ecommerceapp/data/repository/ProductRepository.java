@@ -2,21 +2,24 @@ package com.example.ecommerceapp.data.repository;
 
 import android.os.Handler;
 import android.os.Looper;
-
+import androidx.annotation.NonNull;
 import com.example.ecommerceapp.data.model.Category;
 import com.example.ecommerceapp.data.model.Product;
-
+import com.example.ecommerceapp.data.model.Review;
+import com.example.ecommerceapp.data.model.User;
+import com.example.ecommerceapp.data.model.network.ProductListResponse;
+import com.example.ecommerceapp.network.ApiService;
+import com.example.ecommerceapp.network.RetrofitClient;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-/**
- * Simulated repository for products and categories.
- * In a real app, this would interact with a backend API.
- */
+import retrofit2.Call;
+import retrofit2.Response;
+
+
 public class ProductRepository {
 
     public interface RepositoryCallback<T> {
@@ -24,260 +27,233 @@ public class ProductRepository {
         void onError(String message);
     }
 
-    private static final int SIMULATED_DELAY_MS = 1000;
-    private Handler handler = new Handler(Looper.getMainLooper());
+    private static final int SIMULATED_DELAY_MS = 1000; // Kept for mock review delay
+    private Handler handler = new Handler(Looper.getMainLooper()); // Kept for mock review delay
 
-    // --- Simulated Data Store ---
-    private final Map<String, Product> mockProducts = new HashMap<>();
-    private final Map<String, Category> mockCategories = new HashMap<>();
+    private final ApiService apiService;
+    private final Map<String, List<Review>> mockProductReviews = new HashMap<>(); // productId -> List<Review>
+    private final AuthRepository authRepository;
 
     public ProductRepository() {
-        // Initialize with some mock data
-        this.authRepository = new AuthRepository(); // Or getInstance() if singleton
-        setupMockData();
-        setupMockReviews(); // Initialize some mock reviews
+        this.apiService = RetrofitClient.getApiService();
+        // Assuming AuthRepository might be a singleton or accessible globally for now
+        // In a DI setup, this would be injected.
+        this.authRepository = new AuthRepository();
+        setupMockReviews(); // Reviews are still mocked locally
     }
 
-    private void setupMockData() {
-        // Categories
-        Category cat1 = new Category("cat_1", "Stitched Cloths", "Ready-to-wear stitched garments", null);
-        Category cat2 = new Category("cat_2", "Garments (Unstitched)", "Fabric materials for custom stitching", null);
-        Category cat3 = new Category("cat_3", "Kurtis", "Women's kurtis", "cat_1");
-        Category cat4 = new Category("cat_4", "Shirts", "Men's and Women's Shirts", "cat_1");
-        Category cat5 = new Category("cat_5", "Cotton Fabric", "Cotton based unstitched material", "cat_2");
+    // Constructor for dependency injection (preferred, but not used in current setup)
+    // public ProductRepository(ApiService apiService, AuthRepository authRepository) {
+    //     this.apiService = apiService;
+    //     this.authRepository = authRepository;
+    //     setupMockReviews();
+    // }
 
-        mockCategories.put(cat1.getCategoryId(), cat1);
-        mockCategories.put(cat2.getCategoryId(), cat2);
-        mockCategories.put(cat3.getCategoryId(), cat3);
-        mockCategories.put(cat4.getCategoryId(), cat4);
-        mockCategories.put(cat5.getCategoryId(), cat5);
-
-        // Products
-        mockProducts.put("prod_1", new Product("prod_1", "Elegant Floral Kurti", "Beautifully stitched kurti with floral patterns.",
-                25.99, "SKU001", cat3.getCategoryId(), "EthnicWonders", "Cotton Blend", "Pink",
-                Arrays.asList("S", "M", "L", "XL"), 20,
-                "https://via.placeholder.com/300/FFC0CB/000000?Text=Kurti", new ArrayList<>(), true, 4.5));
-
-        mockProducts.put("prod_2", new Product("prod_2", "Men's Casual Shirt", "Comfortable cotton casual shirt.",
-                19.50, "SKU002", cat4.getCategoryId(), "UrbanStyle", "Cotton", "Blue",
-                Arrays.asList("M", "L", "XL", "XXL"), 30,
-                "https://via.placeholder.com/300/ADD8E6/000000?Text=Shirt", new ArrayList<>(), false, 4.2));
-
-        mockProducts.put("prod_3", new Product("prod_3", "Pure Silk Fabric", "Luxurious pure silk unstitched fabric (5m).",
-                75.00, "SKU003", cat2.getCategoryId(), "SilkTreasures", "Silk", "Gold",
-                new ArrayList<>(), // No specific sizes for fabric by piece
-                10, "https://via.placeholder.com/300/FFD700/000000?Text=SilkFabric", new ArrayList<>(), true, 4.8));
-
-        mockProducts.put("prod_4", new Product("prod_4", "Designer Anarkali Suit", "Heavy embroidered Anarkali suit, stitched.",
-                120.00, "SKU004", cat1.getCategoryId(), "RoyalAttire", "Georgette", "Red",
-                Arrays.asList("M", "L"), 15,
-                "https://via.placeholder.com/300/FF0000/FFFFFF?Text=Anarkali", new ArrayList<>(), true, 4.7));
-
-        mockProducts.put("prod_5", new Product("prod_5", "Basic Cotton T-Shirt", "Plain cotton t-shirt, various colors.",
-                9.99, "SKU005", cat4.getCategoryId(), "EverydayBasic", "Cotton", "White",
-                Arrays.asList("S", "M", "L", "XL", "XXL"), 50,
-                "https://via.placeholder.com/300/FFFFFF/000000?Text=T-Shirt", new ArrayList<>(), false, 4.0));
-
-        mockProducts.put("prod_6", new Product("prod_6", "Linen Summer Shirt", "Lightweight linen shirt for summer.",
-                22.99, "SKU006", cat4.getCategoryId(), "SummerCool", "Linen", "Light Blue",
-                Arrays.asList("M", "L", "XL"), 25,
-                "https://via.placeholder.com/300/B0E0E6/000000?Text=LinenShirt", new ArrayList<>(), true, 4.3));
-    }
-
-    public void getAllProducts(RepositoryCallback<List<Product>> callback) {
-        handler.postDelayed(() -> {
-            if (mockProducts.isEmpty()) {
-                 // callback.onError("No products available at the moment.");
-                 // Return empty list instead of error for this case
-                 callback.onSuccess(new ArrayList<>(mockProducts.values()));
-            } else {
-                callback.onSuccess(new ArrayList<>(mockProducts.values()));
+    public void getAllProducts(Map<String, String> options, RepositoryCallback<ProductListResponse> callback) {
+        apiService.getAllProducts(options).enqueue(new retrofit2.Callback<ProductListResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ProductListResponse> call, @NonNull Response<ProductListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Failed to fetch products.";
+                    if (response.code() == 404) errorMsg = "Products not found.";
+                    else if (response.code() >= 500) errorMsg = "Server error. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
-        }, SIMULATED_DELAY_MS);
+
+            @Override
+            public void onFailure(@NonNull Call<ProductListResponse> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not fetch products. Please check connection.");
+            }
+        });
     }
 
     public void getProductById(String productId, RepositoryCallback<Product> callback) {
-        handler.postDelayed(() -> {
-            Product product = mockProducts.get(productId);
-            if (product != null) {
-                callback.onSuccess(product);
-            } else {
-                callback.onError("Product not found.");
+        apiService.getProductById(productId).enqueue(new retrofit2.Callback<Product>() {
+            @Override
+            public void onResponse(@NonNull Call<Product> call, @NonNull Response<Product> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Failed to fetch product " + productId + ".";
+                    if (response.code() == 404) errorMsg = "Product " + productId + " not found.";
+                    else if (response.code() >= 500) errorMsg = "Server error. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
-        }, SIMULATED_DELAY_MS / 2); // Faster for single item fetch
+
+            @Override
+            public void onFailure(@NonNull Call<Product> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not fetch product " + productId + ". Please check connection.");
+            }
+        });
     }
 
-    public void getProductsByCategory(String categoryId, RepositoryCallback<List<Product>> callback) {
-        handler.postDelayed(() -> {
-            List<Product> categoryProducts = mockProducts.values().stream()
-                    .filter(p -> p.getCategoryId().equals(categoryId) || isSubCategory(p.getCategoryId(), categoryId))
-                    .collect(Collectors.toList());
-            if (!categoryProducts.isEmpty()) {
-                callback.onSuccess(categoryProducts);
-            } else {
-                // callback.onError("No products found in this category.");
-                // Return empty list instead of error
-                callback.onSuccess(new ArrayList<>());
+    public void getProductsByCategory(String categoryId, Map<String, String> options, RepositoryCallback<ProductListResponse> callback) {
+        apiService.getProductsByCategory(categoryId, options).enqueue(new retrofit2.Callback<ProductListResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ProductListResponse> call, @NonNull Response<ProductListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Failed to fetch products for category " + categoryId + ".";
+                    if (response.code() == 404) errorMsg = "No products found for category " + categoryId + ".";
+                    else if (response.code() >= 500) errorMsg = "Server error. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
-        }, SIMULATED_DELAY_MS);
-    }
 
-    private boolean isSubCategory(String childCategoryId, String parentCategoryId) {
-        Category current = mockCategories.get(childCategoryId);
-        while (current != null && current.getParentCategoryId() != null) {
-            if (current.getParentCategoryId().equals(parentCategoryId)) {
-                return true;
+            @Override
+            public void onFailure(@NonNull Call<ProductListResponse> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not fetch products for category " + categoryId + ". Please check connection.");
             }
-            current = mockCategories.get(current.getParentCategoryId());
-        }
-        return false;
+        });
     }
 
     public void getCategories(RepositoryCallback<List<Category>> callback) {
-        handler.postDelayed(() -> {
-            if (mockCategories.isEmpty()) {
-                // callback.onError("No categories available.");
-                callback.onSuccess(new ArrayList<>(mockCategories.values()));
-            } else {
-                callback.onSuccess(new ArrayList<>(mockCategories.values()));
+        apiService.getAllCategories().enqueue(new retrofit2.Callback<List<Category>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<Category>> call, @NonNull Response<List<Category>> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Failed to fetch categories.";
+                    if (response.code() >= 500) errorMsg = "Server error fetching categories. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
-        }, SIMULATED_DELAY_MS / 2);
+
+            @Override
+            public void onFailure(@NonNull Call<List<Category>> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not fetch categories. Please check connection.");
+            }
+        });
     }
 
-    public void searchProducts(String query, RepositoryCallback<List<Product>> callback) {
-        handler.postDelayed(() -> {
-            if (query == null || query.trim().isEmpty()) {
-                callback.onSuccess(new ArrayList<>(mockProducts.values())); // Return all if query is empty
-                return;
+    public void searchProducts(String query, RepositoryCallback<ProductListResponse> callback) {
+         if (query == null || query.trim().isEmpty()) {
+             callback.onError("Search query cannot be empty."); // Or return all products if API supports empty query for all
+            return;
+        }
+        apiService.searchProducts(query).enqueue(new retrofit2.Callback<ProductListResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ProductListResponse> call, @NonNull Response<ProductListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Search failed for query '" + query + "'.";
+                    if (response.code() == 404) errorMsg = "No results found for '" + query + "'.";
+                    else if (response.code() >= 500) errorMsg = "Server error during search. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
-            String lowerCaseQuery = query.toLowerCase();
-            List<Product> searchResults = mockProducts.values().stream()
-                    .filter(product -> (product.getName() != null && product.getName().toLowerCase().contains(lowerCaseQuery)) ||
-                                       (product.getDescription() != null && product.getDescription().toLowerCase().contains(lowerCaseQuery)) ||
-                                       (product.getBrand() != null && product.getBrand().toLowerCase().contains(lowerCaseQuery)) ||
-                                       (product.getSku() != null && product.getSku().toLowerCase().contains(lowerCaseQuery)) ||
-                                       (product.getMaterial() != null && product.getMaterial().toLowerCase().contains(lowerCaseQuery)) ||
-                                       (product.getColor() != null && product.getColor().toLowerCase().contains(lowerCaseQuery)))
-                    .collect(Collectors.toList());
-            callback.onSuccess(searchResults);
-        }, SIMULATED_DELAY_MS / 2); // Faster simulation for search
+
+            @Override
+            public void onFailure(@NonNull Call<ProductListResponse> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not perform search for '" + query + "'. Please check connection.");
+            }
+        });
     }
 
-    private final Map<String, List<Review>> mockProductReviews = new HashMap<>(); // productId -> List<Review>
-    private final AuthRepository authRepository; // To get current user for submitting reviews
+    public void getProducts(String query, String categoryId, Map<String, String> options, RepositoryCallback<ProductListResponse> callback) {
+        Map<String, String> queryOptions = new HashMap<>(options != null ? options : new HashMap<>());
+        boolean isSearch = false;
+        if (query != null && !query.trim().isEmpty()) {
+            queryOptions.put("q", query);
+            isSearch = true;
+        }
+        if (categoryId != null && !categoryId.isEmpty() && !categoryId.equals("all")) {
+            queryOptions.put("category", categoryId);
+        }
 
-    // Combined method for search and category filtering
-    public void getProducts(String query, String categoryId, RepositoryCallback<List<Product>> callback) {
-        handler.postDelayed(() -> {
-            List<Product> results = new ArrayList<>(mockProducts.values());
+        Call<ProductListResponse> apiCall;
 
-            // Filter by category first if categoryId is provided
-            if (categoryId != null && !categoryId.isEmpty() && !categoryId.equals("all")) { // "all" means no category filter
-                results = results.stream()
-                        .filter(p -> p.getCategoryId().equals(categoryId) || isSubCategory(p.getCategoryId(), categoryId))
-                        .collect(Collectors.toList());
+        // Determine the most appropriate endpoint based on parameters
+        if (isSearch && (categoryId == null || categoryId.isEmpty() || categoryId.equals("all"))) {
+            // Only search query is active (or category is "all") -> Use dedicated search endpoint
+            // Note: The API spec GET /products/search only shows 'q'. If it supports other options, ApiService needs update.
+            // For now, assuming it only takes 'q', other options in queryOptions might be ignored by this specific endpoint.
+            apiCall = apiService.searchProducts(queryOptions.get("q"));
+        } else if (!isSearch && categoryId != null && !categoryId.isEmpty() && !categoryId.equals("all")) {
+            // Only category filter is active (and not "all") -> Use getProductsByCategory endpoint
+            apiCall = apiService.getProductsByCategory(categoryId, options != null ? options : new HashMap<>());
+        } else {
+            // General case: either no filters, or multiple filters that /products is assumed to handle
+            // (e.g., /products?category=X&q=Y or /products?q=Y or /products?category=X)
+            apiCall = apiService.getAllProducts(queryOptions);
+        }
+
+        apiCall.enqueue(new retrofit2.Callback<ProductListResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<ProductListResponse> call, @NonNull Response<ProductListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    String errorMsg = "Failed to fetch products with current filters.";
+                    if (response.code() == 404) errorMsg = "No products found matching criteria.";
+                    else if (response.code() >= 500) errorMsg = "Server error. Please try again later.";
+                    else errorMsg += " Error: " + response.code() + " " + response.message();
+                    callback.onError(errorMsg);
+                }
             }
 
-            // Then filter by search query if query is provided
-            if (query != null && !query.trim().isEmpty()) {
-                String lowerCaseQuery = query.toLowerCase();
-                results = results.stream()
-                        .filter(product -> (product.getName() != null && product.getName().toLowerCase().contains(lowerCaseQuery)) ||
-                                           (product.getDescription() != null && product.getDescription().toLowerCase().contains(lowerCaseQuery)) ||
-                                           (product.getBrand() != null && product.getBrand().toLowerCase().contains(lowerCaseQuery)) ||
-                                           (product.getSku() != null && product.getSku().toLowerCase().contains(lowerCaseQuery)))
-                        .collect(Collectors.toList());
+            @Override
+            public void onFailure(@NonNull Call<ProductListResponse> call, @NonNull Throwable t) {
+                callback.onError("Network error: Could not fetch filtered products. Please check connection.");
             }
-
-            // if (results.isEmpty()){
-            //     callback.onError("No products match your criteria.");
-            // } else {
-                callback.onSuccess(results);
-            // }
-        }, SIMULATED_DELAY_MS);
+        });
     }
 
     private void setupMockReviews() {
-        // Reviews for prod_1 (Elegant Floral Kurti)
-        List<Review> reviewsForProd1 = new ArrayList<>();
-        reviewsForProd1.add(new Review("rev1_1", "prod_1", "user_jane", "Jane D.", 5, "Absolutely beautiful kurti! Fits perfectly.", new Date(System.currentTimeMillis() - 86400000 * 2))); // 2 days ago
-        reviewsForProd1.add(new Review("rev1_2", "prod_1", "user_sara", "Sara K.", 4, "Good quality material, color is vibrant.", new Date(System.currentTimeMillis() - 86400000))); // 1 day ago
-        mockProductReviews.put("prod_1", reviewsForProd1);
-        updateProductAverageRating("prod_1");
+        // Mock reviews remain, as API endpoints for reviews are not specified.
+        // Product IDs used here should ideally match IDs that your API might return for testing.
+        List<Review> reviewsForProd001 = new ArrayList<>();
+        reviewsForProd001.add(new Review("revmock_001_1", "prod_001", "user_mock_jane", "Jane M.", 5, "This is a mock review for product 001! Looks great.", new Date(System.currentTimeMillis() - 86400000 * 2)));
+        reviewsForProd001.add(new Review("revmock_001_2", "prod_001", "user_mock_sara", "Sara M.", 4, "Good mock product, fast mock delivery.", new Date(System.currentTimeMillis() - 86400000)));
+        mockProductReviews.put("prod_001", reviewsForProd001);
 
-
-        // Reviews for prod_2 (Men's Casual Shirt)
-        List<Review> reviewsForProd2 = new ArrayList<>();
-        reviewsForProd2.add(new Review("rev2_1", "prod_2", "user_john", "John B.", 5, "Great shirt, very comfortable.", new Date(System.currentTimeMillis() - 86400000 * 3)));
-        mockProductReviews.put("prod_2", reviewsForProd2);
-        updateProductAverageRating("prod_2");
-
-        // No reviews for prod_3 initially
+        List<Review> reviewsForProd002 = new ArrayList<>();
+        reviewsForProd002.add(new Review("revmock_002_1", "prod_002", "user_mock_john", "John M.", 3, "Okay mock product, could be better.", new Date(System.currentTimeMillis() - 86400000 * 3)));
+        mockProductReviews.put("prod_002", reviewsForProd002);
     }
 
     public void getReviewsForProduct(String productId, RepositoryCallback<List<Review>> callback) {
         handler.postDelayed(() -> {
             List<Review> reviews = mockProductReviews.getOrDefault(productId, new ArrayList<>());
             callback.onSuccess(reviews);
-        }, SIMULATED_DELAY_MS / 3);
+        }, SIMULATED_DELAY_MS / 3); // Simulate delay
     }
 
     public void submitReview(String productId, int rating, String comment, RepositoryCallback<Review> callback) {
         User currentUser = authRepository.getCurrentUser();
-        if (currentUser == null) {
+        if (currentUser == null || currentUser.getUserId() == null) {
             callback.onError("User not logged in. Please log in to submit a review.");
             return;
         }
         String userId = currentUser.getUserId();
-        String username = currentUser.getUsername(); // Or FullName
+        String username = currentUser.getUsername() != null ? currentUser.getUsername() : "Anonymous";
 
-        // Check if user already reviewed this product
         List<Review> existingReviews = mockProductReviews.getOrDefault(productId, new ArrayList<>());
         for (Review existingReview : existingReviews) {
             if (existingReview.getUserId().equals(userId)) {
                 callback.onError("You have already reviewed this product.");
-                // Optionally, allow editing:
-                // existingReview.setRating(rating);
-                // existingReview.setComment(comment);
-                // existingReview.setReviewDate(new Date());
-                // updateProductAverageRating(productId);
-                // callback.onSuccess(existingReview);
                 return;
             }
         }
 
         handler.postDelayed(() -> {
-            Product product = mockProducts.get(productId);
-            if (product == null) {
-                callback.onError("Product not found.");
-                return;
-            }
-
-            String reviewId = "rev_" + productId + "_" + userId + "_" + System.currentTimeMillis();
+            String reviewId = "revmock_" + productId + "_" + userId.substring(0, Math.min(userId.length(),4)) + "_" + System.currentTimeMillis();
             Review newReview = new Review(reviewId, productId, userId, username, rating, comment, new Date());
-
             List<Review> productReviews = mockProductReviews.computeIfAbsent(productId, k -> new ArrayList<>());
             productReviews.add(newReview);
-
-            updateProductAverageRating(productId);
             callback.onSuccess(newReview);
-
-        }, SIMULATED_DELAY_MS / 2);
-    }
-
-    private void updateProductAverageRating(String productId) {
-        Product product = mockProducts.get(productId);
-        List<Review> reviews = mockProductReviews.get(productId);
-
-        if (product != null && reviews != null && !reviews.isEmpty()) {
-            double sum = 0;
-            for (Review review : reviews) {
-                sum += review.getRating();
-            }
-            double average = sum / reviews.size();
-            product.setAverageRating(average);
-        } else if (product != null) {
-            product.setAverageRating(0.0); // Reset if no reviews
-        }
+        }, SIMULATED_DELAY_MS / 2); // Simulate delay
     }
 }

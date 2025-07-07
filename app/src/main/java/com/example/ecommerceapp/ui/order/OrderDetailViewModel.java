@@ -27,8 +27,9 @@ public class OrderDetailViewModel extends AndroidViewModel {
 
     public OrderDetailViewModel(@NonNull Application application, String orderId) {
         super(application);
-        this.orderRepository = OrderRepository.getInstance();
-        this.authRepository = new AuthRepository(); // Assuming constructor or getInstance()
+        Context appContext = application.getApplicationContext();
+        this.orderRepository = OrderRepository.getInstance(appContext);
+        this.authRepository = new AuthRepository(appContext); // AuthRepository needs context
         this.orderId = orderId;
         fetchOrderDetails();
     }
@@ -53,8 +54,8 @@ public class OrderDetailViewModel extends AndroidViewModel {
             isLoading.setValue(false);
             return;
         }
-
-        orderRepository.getOrderById(orderId, currentUser.getUserId(), new OrderRepository.OrderCallback<Order>() {
+        // The API GET /orders/{orderId} is user-specific via token, so userId not needed in call
+        orderRepository.getOrderById(orderId, new OrderRepository.OrderCallback<Order>() {
             @Override
             public void onSuccess(Order result) {
                 orderDetails.setValue(result);

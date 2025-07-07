@@ -8,7 +8,8 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-// import com.bumptech.glide.Glide; // For image loading
+import com.bumptech.glide.Glide; // Import Glide
+import com.bumptech.glide.request.RequestOptions; // For placeholder/error
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -214,7 +215,20 @@ public class ProductDetailActivity extends AppCompatActivity {
         // } else {
         // imageViewProductDetail.setImageResource(R.drawable.placeholder_image);
         // }
-        imageViewProductDetail.setImageResource(R.mipmap.ic_launcher); // Placeholder
+        // imageViewProductDetail.setImageResource(R.mipmap.ic_launcher); // Placeholder
+        if (product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
+            Glide.with(this)
+                 .load(product.getImageUrl())
+                 .apply(new RequestOptions()
+                         .placeholder(R.drawable.ic_placeholder_image)
+                         .error(R.drawable.ic_error_image))
+                 .into(imageViewProductDetail);
+        } else {
+            Glide.with(this)
+                 .load(R.drawable.ic_placeholder_image)
+                 .into(imageViewProductDetail);
+        }
+
 
         // Update toolbar title
         if (getSupportActionBar() != null) {

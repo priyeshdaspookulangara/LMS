@@ -50,31 +50,48 @@ public class ProductViewModel extends ViewModel {
     }
 
     public void fetchAllProducts() {
-        productRepository.getAllProducts(new ProductRepository.RepositoryCallback<List<Product>>() {
+        // Pass null or empty map for options if no specific filters/pagination needed by default
+        Map<String, String> options = new HashMap<>();
+        // options.put("page", "1"); // Example default pagination
+        // options.put("limit", "10");
+
+        productRepository.getAllProducts(options, new ProductRepository.RepositoryCallback<ProductListResponse>() {
             @Override
-            public void onSuccess(List<Product> result) {
-                products.setValue(result);
+            public void onSuccess(ProductListResponse result) {
+                if (result != null && result.getProducts() != null) {
+                    products.setValue(result.getProducts());
+                    // TODO: Store pagination info (result.getTotal(), result.getPage(), etc.) if UI needs it
+                } else {
+                    products.setValue(new ArrayList<>()); // Empty list if null response
+                }
             }
 
             @Override
             public void onError(String message) {
                 errorMessage.setValue(message);
-                 products.setValue(null); // Clear previous data on error
+                products.setValue(new ArrayList<>()); // Clear previous data on error
             }
         });
     }
 
     public void fetchProductsByCategory(String categoryId) {
-        productRepository.getProductsByCategory(categoryId, new ProductRepository.RepositoryCallback<List<Product>>() {
+        Map<String, String> options = new HashMap<>();
+        // options.put("page", "1");
+        // options.put("limit", "10");
+        productRepository.getProductsByCategory(categoryId, options, new ProductRepository.RepositoryCallback<ProductListResponse>() {
             @Override
-            public void onSuccess(List<Product> result) {
-                products.setValue(result);
+            public void onSuccess(ProductListResponse result) {
+                 if (result != null && result.getProducts() != null) {
+                    products.setValue(result.getProducts());
+                } else {
+                    products.setValue(new ArrayList<>());
+                }
             }
 
             @Override
             public void onError(String message) {
                 errorMessage.setValue(message);
-                products.setValue(null);
+                products.setValue(new ArrayList<>());
             }
         });
     }
@@ -111,10 +128,14 @@ public class ProductViewModel extends ViewModel {
 
     public void searchProducts(String query) {
         errorMessage.setValue(null); // Clear previous errors
-        productRepository.searchProducts(query, new ProductRepository.RepositoryCallback<List<Product>>() {
+        productRepository.searchProducts(query, new ProductRepository.RepositoryCallback<ProductListResponse>() {
             @Override
-            public void onSuccess(List<Product> result) {
-                products.setValue(result);
+            public void onSuccess(ProductListResponse result) {
+                if (result != null && result.getProducts() != null) {
+                    products.setValue(result.getProducts());
+                } else {
+                    products.setValue(new ArrayList<>());
+                }
             }
 
             @Override
@@ -125,13 +146,23 @@ public class ProductViewModel extends ViewModel {
         });
     }
 
-    // Overload or new method for combined search and category filter
+    // Updated method for combined search and category filter
     public void fetchProducts(String query, String categoryId) {
         errorMessage.setValue(null);
-        productRepository.getProducts(query, categoryId, new ProductRepository.RepositoryCallback<List<Product>>() {
+        Map<String, String> options = new HashMap<>();
+        // Add default pagination/sorting options if needed
+        // options.put("page", "1");
+        // options.put("limit", "20");
+
+        productRepository.getProducts(query, categoryId, options, new ProductRepository.RepositoryCallback<ProductListResponse>() {
             @Override
-            public void onSuccess(List<Product> result) {
-                products.setValue(result);
+            public void onSuccess(ProductListResponse result) {
+                if (result != null && result.getProducts() != null) {
+                    products.setValue(result.getProducts());
+                    // TODO: Handle pagination data (total, page, limit) from result
+                } else {
+                    products.setValue(new ArrayList<>());
+                }
             }
 
             @Override

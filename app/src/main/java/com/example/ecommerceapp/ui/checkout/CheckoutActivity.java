@@ -101,6 +101,30 @@ public class CheckoutActivity extends AppCompatActivity {
                 }
                 break;
             case 2: // Currently on Summary
+                OrderSummaryFragment summaryFragment = (OrderSummaryFragment) getSupportFragmentManager().findFragmentByTag(TAG_SUMMARY);
+                if (summaryFragment != null && summaryFragment.getView() != null) {
+                    com.google.android.material.textfield.TextInputEditText etShipId = summaryFragment.getView().findViewById(R.id.editTextShippingIdPlaceholder);
+                    com.google.android.material.textfield.TextInputEditText etPayId = summaryFragment.getView().findViewById(R.id.editTextPaymentIdPlaceholder);
+
+                    String shippingId = etShipId != null ? etShipId.getText().toString().trim() : "";
+                    String paymentId = etPayId != null ? etPayId.getText().toString().trim() : "";
+
+                    if (shippingId.isEmpty()) {
+                        Toast.makeText(this, "Please enter Shipping Address ID (Placeholder)", Toast.LENGTH_SHORT).show();
+                        etShipId.setError("Required"); // Show error on the field
+                        return; // Stop before placing order
+                    }
+                     if (paymentId.isEmpty()) {
+                        Toast.makeText(this, "Please enter Payment Method ID (Placeholder)", Toast.LENGTH_SHORT).show();
+                        etPayId.setError("Required"); // Show error on the field
+                        return; // Stop before placing order
+                    }
+                    checkoutViewModel.setShippingAddressIdPlaceholder(shippingId);
+                    checkoutViewModel.setPaymentMethodIdPlaceholder(paymentId);
+                } else {
+                     Toast.makeText(this, "Error accessing summary details.", Toast.LENGTH_SHORT).show();
+                    return; // Stop
+                }
                 // "Next" button here is "Place Order"
                 checkoutViewModel.placeOrder();
                 // Observer will handle success/failure

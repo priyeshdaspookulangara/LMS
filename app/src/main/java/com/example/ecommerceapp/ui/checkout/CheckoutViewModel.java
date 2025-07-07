@@ -1,8 +1,11 @@
 package com.example.ecommerceapp.ui.checkout;
 
+import android.app.Application; // For AndroidViewModel
+import androidx.annotation.NonNull; // For AndroidViewModel constructor
+import androidx.lifecycle.AndroidViewModel; // Changed from ViewModel
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+// import androidx.lifecycle.ViewModel; // Removed
 
 import com.example.ecommerceapp.data.model.Cart;
 import com.example.ecommerceapp.data.model.Order;
@@ -16,13 +19,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CheckoutViewModel extends ViewModel {
+public class CheckoutViewModel extends AndroidViewModel { // Changed to AndroidViewModel
 
     private final OrderRepository orderRepository;
     private final CartRepository cartRepository;
-    private final AuthRepository authRepository; // To get current user
+    private final AuthRepository authRepository;
 
-    private final MutableLiveData<Order> currentOrder = new MutableLiveData<>();
+    // LiveData for building the order client-side before final placement
+    // This 'currentOrder' is more of a draft or view model state than a direct API model at this stage.
+    private final MutableLiveData<Order> draftOrder = new MutableLiveData<>(); // Renamed for clarity
+
+    // LiveData for UI input fields
     private final MutableLiveData<String> shippingFullName = new MutableLiveData<>();
     private final MutableLiveData<String> shippingAddressLine1 = new MutableLiveData<>();
     private final MutableLiveData<String> shippingAddressLine2 = new MutableLiveData<>();
@@ -38,36 +45,38 @@ public class CheckoutViewModel extends ViewModel {
     private final MutableLiveData<Boolean> orderPlacementResult = new MutableLiveData<>();
     private final MutableLiveData<String> orderPlacementError = new MutableLiveData<>();
 
+    // New LiveData for placeholder IDs, to be set by UI for now
+    private final MutableLiveData<String> shippingAddressIdPlaceholder = new MutableLiveData<>();
+    private final MutableLiveData<String> paymentMethodIdPlaceholder = new MutableLiveData<>();
 
-    public CheckoutViewModel() {
-        // In a real app, inject these (e.g., using Hilt)
-        orderRepository = OrderRepository.getInstance();
-        cartRepository = CartRepository.getInstance();
-        // AuthRepository might not be a singleton, adjust as per your AuthRepository implementation
-        // For this example, let's assume it has a static method or is also a singleton for simplicity
-        authRepository = new AuthRepository(); // Or AuthRepository.getInstance() if it's a singleton
 
-        initializeOrder();
+    public CheckoutViewModel(@NonNull Application application) { // Updated constructor
+        super(application);
+        Context appContext = application.getApplicationContext();
+        orderRepository = OrderRepository.getInstance(appContext);
+        cartRepository = CartRepository.getInstance(appContext);
+        authRepository = new AuthRepository(appContext); // AuthRepository also needs context
+
+        initializeDraftOrder();
     }
 
-    private void initializeOrder() {
-        User currentUser = authRepository.getCurrentUser(); // Get current logged-in user
-        if (currentUser != null) {
-            Order newOrder = new Order(currentUser.getUserId());
-            // Pre-fill with user's saved address if available
-            // For now, we'll leave them blank for user to input
-            // newOrder.setShippingFullName(currentUser.getFullName());
-            // ... set other address fields ...
-            currentOrder.setValue(newOrder);
+    private void initializeDraftOrder() { // Renamed
+        User currentUser = authRepository.getCurrentUser();
+        if (currentUser != null && currentUser.getUserId() != null) {
+            // Create a new local Order object to hold draft details.
+            // This doesn't have an orderId from the server yet.
+            Order newDraftOrder = new Order();
+            newDraftOrder.setUserId(currentUser.getUserId()); // Set userId for reference
+            // Pre-fill with user's saved address if available (future enhancement)
+            // For now, shipping details are collected into separate LiveData.
+            draftOrder.setValue(newDraftOrder);
         } else {
-            // Handle case where user is not logged in - checkout shouldn't be accessible
-            // Or it should force login first. For now, this is a potential issue.
             orderPlacementError.setValue("User not logged in. Cannot proceed with checkout.");
         }
     }
 
     // LiveData Getters for UI observation
-    public LiveData<Order> getCurrentOrder() { return currentOrder; }
+    public LiveData<Order> getDraftOrder() { return draftOrder; } // Renamed getter
     public LiveData<String> getShippingFullName() { return shippingFullName; }
     public LiveData<String> getShippingAddressLine1() { return shippingAddressLine1; }
     public LiveData<String> getShippingAddressLine2() { return shippingAddressLine2; }
@@ -76,9 +85,15 @@ public class CheckoutViewModel extends ViewModel {
     public LiveData<String> getShippingPostalCode() { return shippingPostalCode; }
     public LiveData<String> getShippingCountry() { return shippingCountry; }
     public LiveData<String> getShippingPhoneNumber() { return shippingPhoneNumber; }
-    public LiveData<String> getSelectedPaymentMethod() { return selectedPaymentMethod; }
+    public LiveData<String> getSelectedPaymentMethod() { return selectedPaymentMethod; } // For UI state
     public LiveData<Boolean> getOrderPlacementResult() { return orderPlacementResult; }
     public LiveData<String> getOrderPlacementError() { return orderPlacementError; }
+
+    // Getters and Setters for placeholder IDs
+    public LiveData<String> getShippingAddressIdPlaceholder() { return shippingAddressIdPlaceholder; }
+    public void setShippingAddressIdPlaceholder(String id) { shippingAddressIdPlaceholder.setValue(id); }
+    public LiveData<String> getPaymentMethodIdPlaceholder() { return paymentMethodIdPlaceholder; }
+    public void setPaymentMethodIdPlaceholder(String id) { paymentMethodIdPlaceholder.setValue(id); }
 
 
     // Update methods for shipping info
@@ -113,40 +128,53 @@ public class CheckoutViewModel extends ViewModel {
 
 
     public void prepareOrderForSummary() {
-        Order order = currentOrder.getValue();
-        Cart cart = cartRepository.getCart().getValue(); // Get current cart
+        Order order = draftOrder.getValue(); // Use draftOrder
+        Cart cart = cartRepository.getCart().getValue();
 
         if (order == null || cart == null || cart.getItems().isEmpty()) {
             orderPlacementError.setValue("Cannot prepare order summary. Cart is empty or order not initialized.");
             return;
         }
 
-        // Set shipping details from LiveData
-        order.setShippingFullName(shippingFullName.getValue());
-        order.setShippingAddressLine1(shippingAddressLine1.getValue());
-        order.setShippingAddressLine2(shippingAddressLine2.getValue());
-        order.setShippingCity(shippingCity.getValue());
-        order.setShippingState(shippingState.getValue());
-        order.setShippingPostalCode(shippingPostalCode.getValue());
-        order.setShippingCountry(shippingCountry.getValue());
-        order.setShippingPhoneNumber(shippingPhoneNumber.getValue());
+        // Create a new Order.ShippingAddress object for the draftOrder
+        Order.ShippingAddress shippingAddr = new Order.ShippingAddress();
+        shippingAddr.fullName = shippingFullName.getValue();
+        shippingAddr.addressLine1 = shippingAddressLine1.getValue();
+        shippingAddr.addressLine2 = shippingAddressLine2.getValue();
+        shippingAddr.city = shippingCity.getValue();
+        shippingAddr.state = shippingState.getValue();
+        shippingAddr.postalCode = shippingPostalCode.getValue();
+        shippingAddr.country = shippingCountry.getValue();
+        shippingAddr.phoneNumber = shippingPhoneNumber.getValue();
+        order.setShippingAddress(shippingAddr);
 
-        // Set payment method
-        order.setPaymentMethod(selectedPaymentMethod.getValue());
+
+        // Create a new Order.PaymentDetails object
+        Order.PaymentDetails payment = new Order.PaymentDetails();
+        payment.paymentMethodType = selectedPaymentMethod.getValue();
+        // Other payment details (status, transactionId) will be set by API response or later steps.
+        order.setPaymentDetails(payment);
+
 
         // Convert CartItems to OrderItems
         List<OrderItem> orderItems = cart.getItems().stream()
-                .map(OrderItem::new) // Using the constructor OrderItem(CartItem)
+                .map(cartItem -> new OrderItem(
+                        "client_item_" + cartItem.getProductId(), // Temporary client-side ID
+                        cartItem.getProductId(),
+                        cartItem.getName(),
+                        cartItem.getQuantity(),
+                        cartItem.getPrice()
+                ))
                 .collect(Collectors.toList());
         order.setItems(orderItems);
-        order.setTotalAmount(cart.getTotalPrice()); // Or recalculate based on OrderItems if prices could change
+        order.setTotalAmount(cart.getTotalAmount()); // Use total from cart API
 
-        currentOrder.setValue(order); // Update the LiveData for the order summary screen
+        draftOrder.setValue(order); // Update the LiveData for the order summary screen
     }
 
 
     public void placeOrder() {
-        Order orderToPlace = currentOrder.getValue();
+        Order orderToPlace = draftOrder.getValue(); // Use draftOrder
         if (orderToPlace == null) {
             orderPlacementError.setValue("Order details not available.");
             orderPlacementResult.setValue(false);
@@ -166,16 +194,34 @@ public class CheckoutViewModel extends ViewModel {
 
         // Simulate payment processing step here if it wasn't done before summary
         // For now, assume payment details are collected and "processed"
-        orderToPlace.setPaymentStatus("Paid"); // Mark as paid for simulation
-        orderToPlace.setTransactionId("SIM_TXN_" + System.currentTimeMillis()); // Simulated TXN ID
-        orderToPlace.setStatus("Processing");
+        // orderToPlace.setPaymentStatus("Paid"); // This will be set by backend
+        // orderToPlace.setTransactionId("SIM_TXN_" + System.currentTimeMillis()); // This will be set by backend
+        // orderToPlace.setStatus("Processing"); // This will be set by backend
 
-        orderRepository.placeOrder(orderToPlace, new OrderRepository.OrderCallback<Order>() {
+        String shipAddrId = shippingAddressIdPlaceholder.getValue();
+        String payMethodId = paymentMethodIdPlaceholder.getValue();
+
+        if (shipAddrId == null || shipAddrId.isEmpty()) {
+            orderPlacementError.setValue("Shipping Address ID is required.");
+            orderPlacementResult.setValue(false);
+            return;
+        }
+        if (payMethodId == null || payMethodId.isEmpty()) {
+            orderPlacementError.setValue("Payment Method ID is required.");
+            orderPlacementResult.setValue(false);
+            return;
+        }
+
+        OrderCreationRequest orderRequest = new OrderCreationRequest(shipAddrId, payMethodId);
+
+        orderRepository.placeOrder(orderRequest, new OrderRepository.OrderCallback<Order>() {
             @Override
             public void onSuccess(Order placedOrder) {
-                currentOrder.setValue(placedOrder); // Update with final order details from "backend"
+                // The API returns the created order.
+                // We can update draftOrder or a new LiveData<Order> for the confirmed order.
+                draftOrder.setValue(placedOrder); // Update draft with server-confirmed details
                 orderPlacementResult.setValue(true);
-                cartRepository.clearCart(); // Clear cart after successful order
+                cartRepository.clearCart(); // Clear cart on successful API call
             }
 
             @Override

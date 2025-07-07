@@ -120,5 +120,36 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Placeholder Inputs for IDs -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayoutShippingIdPlaceholder"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Shipping Address ID (Placeholder)">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextShippingIdPlaceholder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                tools:text="addr_xyz789"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/textInputLayoutPaymentIdPlaceholder"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="Payment Method ID (Placeholder)">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editTextPaymentIdPlaceholder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                tools:text="pay_def456"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
     </LinearLayout>
 </ScrollView>

@@ -12,6 +12,7 @@ public class ECommerceApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        com.example.ecommerceapp.network.RetrofitClient.initializeTokenManager(this); // Initialize TokenManager
         createNotificationChannels();
     }
 

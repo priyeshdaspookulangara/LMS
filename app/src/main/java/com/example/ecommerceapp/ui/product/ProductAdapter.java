@@ -10,10 +10,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide; // Import Glide
+import com.bumptech.glide.request.RequestOptions; // For placeholder/error
 import com.example.ecommerceapp.R;
 import com.example.ecommerceapp.data.model.Product;
-// You'll need an image loading library like Glide or Picasso in a real app
-// import com.bumptech.glide.Glide;
 
 import java.util.List;
 import java.util.Locale;
@@ -95,17 +95,21 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             // Load image using Glide or Picasso
             // For now, using a placeholder if imageUrlPrimary is null or empty
-            // if (product.getImageUrlPrimary() != null && !product.getImageUrlPrimary().isEmpty()) {
-            //     Glide.with(itemView.getContext())
-            //          .load(product.getImageUrlPrimary())
-            //          .placeholder(R.drawable.placeholder_image) // Add a placeholder drawable
-            //          .error(R.drawable.error_image) // Add an error drawable
-            //          .into(imageViewProduct);
-            // } else {
-            //     imageViewProduct.setImageResource(R.drawable.placeholder_image);
-            // }
+            if (product.getImageUrl() != null && !product.getImageUrl().isEmpty()) { // Use getImageUrl()
+                Glide.with(itemView.getContext())
+                     .load(product.getImageUrl()) // Use getImageUrl()
+                     .apply(new RequestOptions()
+                             .placeholder(R.drawable.ic_placeholder_image)
+                             .error(R.drawable.ic_error_image))
+                     .into(imageViewProduct);
+            } else {
+                // Set placeholder if URL is null or empty
+                Glide.with(itemView.getContext())
+                     .load(R.drawable.ic_placeholder_image) // Load placeholder directly
+                     .into(imageViewProduct);
+            }
             // Placeholder for image:
-            imageViewProduct.setImageResource(R.mipmap.ic_launcher); // Replace with a proper placeholder
+            // imageViewProduct.setImageResource(R.mipmap.ic_launcher); // Replace with a proper placeholder
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) {

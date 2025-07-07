@@ -59,6 +59,16 @@ dependencies {
     // UI Automator for more complex UI interactions (optional, if needed)
     // androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.2.0'
 
+    // Networking - Retrofit and Gson
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0' // OkHttp (Retrofit uses this underneath)
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0' // For logging API requests/responses
+
+    // Image Loading - Glide
+    implementation 'com.github.bumptech.glide:glide:4.12.0' // Use a recent version of Glide
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.12.0'
+
     // Add other dependencies here:
-    // e.g., Firebase, Retrofit, Glide, Room, etc.
+    // e.g., Firebase, Room, etc.
 }

@@ -30,7 +30,12 @@ public class OrderSummaryFragment extends Fragment {
     private TextView textViewShippingName, textViewShippingAddress, textViewShippingContact;
     private TextView textViewPaymentMethod, textViewOrderTotal;
     private RecyclerView recyclerViewOrderItemsSummary;
-    private OrderSummaryAdapter orderSummaryAdapter; // A simplified adapter for order items
+    private OrderSummaryAdapter orderSummaryAdapter;
+
+    // EditTexts for placeholder IDs - views are in layout, can be accessed by Activity if needed
+    private com.google.android.material.textfield.TextInputEditText editTextShippingIdPlaceholder;
+    private com.google.android.material.textfield.TextInputEditText editTextPaymentIdPlaceholder;
+
 
     @Nullable
     @Override
@@ -43,6 +48,11 @@ public class OrderSummaryFragment extends Fragment {
         textViewPaymentMethod = view.findViewById(R.id.textViewSummaryPaymentMethod);
         textViewOrderTotal = view.findViewById(R.id.textViewSummaryOrderTotal);
         recyclerViewOrderItemsSummary = view.findViewById(R.id.recyclerViewOrderItemsSummary);
+
+        // Initialize placeholder EditTexts
+        editTextShippingIdPlaceholder = view.findViewById(R.id.editTextShippingIdPlaceholder);
+        editTextPaymentIdPlaceholder = view.findViewById(R.id.editTextPaymentIdPlaceholder);
+
 
         return view;
     }

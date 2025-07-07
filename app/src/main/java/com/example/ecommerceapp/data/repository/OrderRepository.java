@@ -23,28 +23,59 @@ import java.util.stream.Collectors;
  */
 public class OrderRepository {
 
+import android.content.Context; // Added for ApiService
+import androidx.annotation.NonNull; // Added for Retrofit Callbacks
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData; // Still used for userOrdersLiveData if needed for local caching/updates
+
+import com.example.ecommerceapp.data.model.Order;
+import com.example.ecommerceapp.data.model.order.OrderCreationRequest;
+import com.example.ecommerceapp.data.model.order.OrderListResponse;
+import com.example.ecommerceapp.network.ApiService;
+import com.example.ecommerceapp.network.RetrofitClient;
+// Removed unused User import, UUID, Date, Handler, Looper, stream.Collectors
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+/**
+ * Repository for orders. Interacts with backend API.
+ */
+public class OrderRepository {
+
     private static volatile OrderRepository instance;
-    private final MutableLiveData<List<Order>> userOrdersLiveData;
-    private final Map<String, Order> mockOrders; // Stores all orders by orderId
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private static final int SIMULATED_DELAY_MS = 1200;
+    private final ApiService apiService;
+    // The userOrdersLiveData might be re-evaluated. Typically, ViewModels fetch and hold their own LiveData.
+    // If this LiveData is meant to be a global cache, its update logic needs care.
+    // For now, let's assume ViewModels will call methods that return data or use callbacks.
+    // private final MutableLiveData<List<Order>> userOrdersLiveData = new MutableLiveData<>(new ArrayList<>());
 
 
-    private OrderRepository() {
-        mockOrders = new HashMap<>();
-        userOrdersLiveData = new MutableLiveData<>(new ArrayList<>());
-        // setupMockOrders(); // Optional: pre-populate some orders
+    // Constructor requires Context for ApiService
+    private OrderRepository(Context context) {
+        this.apiService = RetrofitClient.getApiService(context.getApplicationContext());
     }
 
-    public static OrderRepository getInstance() {
+    public static OrderRepository getInstance(Context context) { // Context needed for initialization
         if (instance == null) {
             synchronized (OrderRepository.class) {
                 if (instance == null) {
-                    instance = new OrderRepository();
+                    instance = new OrderRepository(context.getApplicationContext());
                 }
             }
         }
         return instance;
+    }
+
+    // Constructor for testing or DI
+    public OrderRepository(ApiService apiService) {
+        this.apiService = apiService;
     }
 
     public interface OrderCallback<T> {
@@ -52,101 +83,64 @@ public class OrderRepository {
         void onError(String message);
     }
 
-    public void placeOrder(Order order, OrderCallback<Order> callback) {
-        handler.postDelayed(() -> {
-            if (order.getUserId() == null || order.getUserId().isEmpty()) {
-                callback.onError("User ID is required to place an order.");
-                return;
-            }
-            if (order.getItems() == null || order.getItems().isEmpty()) {
-                callback.onError("Order must contain at least one item.");
-                return;
-            }
-            // Simulate backend processing
-            String orderId = "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            order.setOrderId(orderId);
-            order.setOrderDate(new Date()); // Ensure order date is set at placement
-            // In a real scenario, payment processing would happen here or before.
-            // If payment is successful:
-            order.setStatus("Processing"); // Or "Pending Payment" if payment is async
-            order.setPaymentStatus("Paid"); // Assuming payment was successful
-
-            mockOrders.put(orderId, order);
-
-            // Update LiveData for the specific user if they are currently being observed
-            List<Order> currentUserOrders = userOrdersLiveData.getValue();
-            if (currentUserOrders != null && order.getUserId().equals(getCurrentUserIdForLiveData())) {
-                // This is a simplification. LiveData should ideally be fetched again or updated more robustly.
-                ArrayList<Order> updatedList = new ArrayList<>(currentUserOrders);
-                updatedList.add(order);
-                userOrdersLiveData.postValue(updatedList);
+    public void placeOrder(OrderCreationRequest orderRequest, OrderCallback<Order> callback) {
+        apiService.createOrder(orderRequest).enqueue(new Callback<Order>() {
+            @Override
+            public void onResponse(@NonNull Call<Order> call, @NonNull Response<Order> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body()); // API returns the created Order
+                } else {
+                    // TODO: Parse errorBody for specific API error message
+                    callback.onError("Order placement failed. Code: " + response.code() + ". " + response.message());
+                }
             }
 
-            callback.onSuccess(order); // Return the processed order (with ID, status, etc.)
-        }, SIMULATED_DELAY_MS);
-    }
-
-    public LiveData<List<Order>> getOrdersForUser(String userId) {
-        // In a real app, this would fetch from backend.
-        // Here, we filter our mock data.
-        // For simplicity, this LiveData is updated when a new order is placed.
-        // A more robust solution would fetch and then post, or have a dedicated LiveData per user.
-
-        // This is a simplified way to update the LiveData for the "current" user.
-        // In a real app, you'd likely fetch based on userId when this method is called.
-        List<Order> filteredOrders = mockOrders.values().stream()
-                .filter(o -> o.getUserId().equals(userId))
-                .collect(Collectors.toList());
-        userOrdersLiveData.postValue(filteredOrders); // Update the LiveData with orders for this specific user
-        return userOrdersLiveData;
-    }
-
-    public void getOrderById(String orderId, String userId, OrderCallback<Order> callback) {
-        handler.postDelayed(() -> {
-            Order order = mockOrders.get(orderId);
-            if (order != null && order.getUserId().equals(userId)) {
-                callback.onSuccess(order);
-            } else if (order != null && !order.getUserId().equals(userId)){
-                callback.onError("Order does not belong to this user.");
+            @Override
+            public void onFailure(@NonNull Call<Order> call, @NonNull Throwable t) {
+                callback.onError("Network error during order placement: " + t.getMessage());
             }
-            else {
-                callback.onError("Order not found.");
+        });
+    }
+
+    // Fetches orders for the authenticated user (token handled by interceptor)
+    public void getOrdersForUser(Map<String, String> options, OrderCallback<OrderListResponse> callback) {
+        apiService.getAllOrdersForUser(options).enqueue(new Callback<OrderListResponse>() {
+            @Override
+            public void onResponse(@NonNull Call<OrderListResponse> call, @NonNull Response<OrderListResponse> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    callback.onError("Failed to fetch orders. Code: " + response.code() + ". " + response.message());
+                }
             }
-        }, SIMULATED_DELAY_MS / 2);
+
+            @Override
+            public void onFailure(@NonNull Call<OrderListResponse> call, @NonNull Throwable t) {
+                callback.onError("Network error fetching orders: " + t.getMessage());
+            }
+        });
     }
 
+    // Fetches a specific order by ID for the authenticated user
+    public void getOrderById(String orderId, OrderCallback<Order> callback) {
+        apiService.getOrderById(orderId).enqueue(new Callback<Order>() {
+            @Override
+            public void onResponse(@NonNull Call<Order> call, @NonNull Response<Order> response) {
+                if (response.isSuccessful() && response.body() != null) {
+                    callback.onSuccess(response.body());
+                } else {
+                    callback.onError("Failed to fetch order " + orderId + ". Code: " + response.code() + ". " + response.message());
+                }
+            }
 
-    // Helper to simulate which user's orders are "live" - very simplified.
-    // In a real app, ViewModels would subscribe for specific users.
-    private String currentUserIdForLiveData = null;
-    public void setObservingUser(String userId) {
-        this.currentUserIdForLiveData = userId;
-        // Trigger a refresh for the new user being observed
-        if (userId != null) {
-            getOrdersForUser(userId);
-        } else {
-            userOrdersLiveData.postValue(new ArrayList<>());
-        }
+            @Override
+            public void onFailure(@NonNull Call<Order> call, @NonNull Throwable t) {
+                callback.onError("Network error fetching order " + orderId + ": " + t.getMessage());
+            }
+        });
     }
-    private String getCurrentUserIdForLiveData() {
-        // This is a placeholder. In a real app, you'd get the current logged-in user's ID.
-        // For now, it might come from AuthRepository or a session manager.
-        // If using the setObservingUser mechanism:
-        return this.currentUserIdForLiveData;
-    }
 
-
-    // Optional: Mock some initial orders
-    private void setupMockOrders() {
-        // User user1 = new User("user123", "testuser", "test@example.com", "Test User");
-        // ArrayList<OrderItem> items1 = new ArrayList<>();
-        // items1.add(new OrderItem("item_prod_1", "prod_1", "Elegant Floral Kurti", 1, 25.99));
-        // items1.add(new OrderItem("item_prod_2", "prod_2", "Men's Casual Shirt", 2, 19.50));
-        // double total1 = (1 * 25.99) + (2 * 19.50);
-
-        // Order order1 = new Order("ORD-MOCK001", user1.getUserId(), new Date(System.currentTimeMillis() - 86400000), items1, total1,
-        // "Delivered", "Test User", "123 Main St", null, "Anytown", "CA", "90210", "USA", "555-1234",
-        // "Credit Card", "Paid", "txn_mock123");
-        // mockOrders.put(order1.getOrderId(), order1);
-    }
+    // The setObservingUser and related LiveData logic for userOrdersLiveData is removed.
+    // ViewModels (OrderHistoryViewModel) will be responsible for fetching orders for the
+    // current user and managing their own LiveData.
 }

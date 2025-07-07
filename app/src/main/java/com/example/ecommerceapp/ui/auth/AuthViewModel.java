@@ -1,22 +1,26 @@
 package com.example.ecommerceapp.ui.auth;
 
+import android.app.Application; // Added for AndroidViewModel
+import androidx.annotation.NonNull; // Added for AndroidViewModel constructor
+import androidx.lifecycle.AndroidViewModel; // Changed from ViewModel
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+// import androidx.lifecycle.ViewModel; // Removed
 
-import com.example.ecommerceapp.data.model.User; // Assuming you have a User model
-import com.example.ecommerceapp.data.repository.AuthRepository; // Assuming a repository
+import com.example.ecommerceapp.data.model.User;
+import com.example.ecommerceapp.data.repository.AuthRepository;
 
-public class AuthViewModel extends ViewModel {
+public class AuthViewModel extends AndroidViewModel { // Changed to AndroidViewModel
 
     private AuthRepository authRepository;
     private MutableLiveData<LoginResult> loginResult = new MutableLiveData<>();
     private MutableLiveData<RegistrationResult> registrationResult = new MutableLiveData<>();
-    private MutableLiveData<User> authenticatedUser = new MutableLiveData<>(); // To hold logged-in user data
+    private MutableLiveData<User> authenticatedUser = new MutableLiveData<>();
 
-    public AuthViewModel() {
-        // In a real app, you'd inject this, possibly with Dagger/Hilt
-        this.authRepository = new AuthRepository();
+    public AuthViewModel(@NonNull Application application) { // Constructor for AndroidViewModel
+        super(application);
+        // Initialize AuthRepository with application context
+        this.authRepository = new AuthRepository(application.getApplicationContext());
     }
 
     public LiveData<LoginResult> getLoginResult() {
@@ -47,9 +51,9 @@ public class AuthViewModel extends ViewModel {
         });
     }
 
-    public void register(String username, String email, String password) {
-        // Simulate API call
-        authRepository.register(username, email, password, new AuthRepository.AuthCallback<User>() {
+    public void register(String username, String email, String password, String fullName) { // Added fullName
+        // API call
+        authRepository.register(username, email, password, fullName, new AuthRepository.AuthCallback<User>() { // Pass fullName
             @Override
             public void onSuccess(User user) {
                 // Potentially auto-login user or direct to login screen

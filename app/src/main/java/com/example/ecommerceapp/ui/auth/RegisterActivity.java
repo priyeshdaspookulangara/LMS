@@ -17,6 +17,7 @@ import com.example.ecommerceapp.R;
 
 public class RegisterActivity extends AppCompatActivity {
 
+    private EditText editTextFullName; // Added
     private EditText editTextUsername;
     private EditText editTextEmail;
     private EditText editTextPassword;
@@ -32,6 +33,7 @@ public class RegisterActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
+        editTextFullName = findViewById(R.id.editTextFullName); // Added
         editTextUsername = findViewById(R.id.editTextUsername);
         editTextEmail = findViewById(R.id.editTextEmail);
         editTextPassword = findViewById(R.id.editTextPassword);
@@ -56,10 +58,17 @@ public class RegisterActivity extends AppCompatActivity {
         });
 
         buttonRegister.setOnClickListener(v -> {
+            String fullName = editTextFullName.getText().toString().trim(); // Added
             String username = editTextUsername.getText().toString().trim();
             String email = editTextEmail.getText().toString().trim();
             String password = editTextPassword.getText().toString().trim();
             String confirmPassword = editTextConfirmPassword.getText().toString().trim();
+
+            if (fullName.isEmpty()) { // Added validation
+                editTextFullName.setError("Full name is required");
+                editTextFullName.requestFocus();
+                return;
+            }
 
             if (username.isEmpty()) {
                 editTextUsername.setError("Username is required");
@@ -86,7 +95,7 @@ public class RegisterActivity extends AppCompatActivity {
             }
 
             progressBar.setVisibility(View.VISIBLE);
-            authViewModel.register(username, email, password);
+            authViewModel.register(username, email, password, fullName); // Pass fullName
         });
 
         textViewLoginLink.setOnClickListener(v -> {
